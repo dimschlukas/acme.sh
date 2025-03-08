@@ -142,6 +142,23 @@ _get_root() {
   return 1
 }
 
+_generate_signature() {
+  method=$1
+  path=$2
+  body=$3
+  timestamp=$(($(date +%s) + 600))
+  
+  message=$(printf "%s /v2/%s\n%s\n\n\n%s" "$method" "$path" "$body" "$timestamp")
+
+  # Compute HMAC SHA-256 signature
+  signature=$(printf "%s" "$message" | openssl dgst -sha256 -hmac "$EXOSCALE_SECRET_KEY" -binary | base64)
+
+  # Construct Authorization header
+  auth_header="EXO2-HMAC-SHA256 credential=$EXOSCALE_API_KEY,expires=$timestamp,signature=$signature"
+  echo $auth_header
+}
+
+
 # returns response
 _exoscale_rest() {
   method=$1
@@ -153,11 +170,8 @@ _exoscale_rest() {
 
   export _H1="Accept: application/json"
 
-  if [ "$token" ]; then
-    export _H2="X-DNS-Domain-Token: $token"
-  else
-    export _H2="X-DNS-Token: $EXOSCALE_API_KEY:$EXOSCALE_SECRET_KEY"
-  fi
+  signature=$(_generate_signature $method $path $data)
+  export _H2="Authorization: $signature"
 
   if [ "$data" ] || [ "$method" = "DELETE" ]; then
     export _H3="Content-Type: application/json"
