@@ -40,7 +40,6 @@ dns_exoscale_add() {
   fi
   _err "Add txt record error."
   return 1
-
 }
 
 # Usage: fulldomain txtvalue
