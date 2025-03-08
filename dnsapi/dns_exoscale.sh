@@ -8,7 +8,7 @@ Options:
  EXOSCALE_SECRET_KEY API Secret key
 '
 
-EXOSCALE_API=https://api.exoscale.com/dns/v1
+EXOSCALE_API=https://api-ch-gva-2.exoscale.com/v2
 
 ########  Public functions #####################
 
@@ -32,8 +32,8 @@ dns_exoscale_add() {
   _debug _domain "$_domain"
 
   _info "Adding record"
-  if _exoscale_rest POST "domains/$_domain_id/records" "{\"record\":{\"name\":\"$_sub_domain\",\"record_type\":\"TXT\",\"content\":\"$txtvalue\",\"ttl\":120}}" "$_domain_token"; then
-    if _contains "$response" "$txtvalue"; then
+  if _exoscale_rest POST "dns-domain/$_domain_id/record" "{\"name\":\"$_sub_domain\",\"type\":\"TXT\",\"content\":\"$txtvalue\",\"ttl\":120}"; then
+    if _contains "$response" "\"state\":\"success\""; then
       _info "Added, OK"
       return 0
     fi
@@ -63,9 +63,9 @@ dns_exoscale_rm() {
   _debug _domain "$_domain"
 
   _debug "Getting txt records"
-  _exoscale_rest GET "domains/${_domain_id}/records?type=TXT&name=$_sub_domain" "" "$_domain_token"
+  _exoscale_rest GET "dns-domain/${_domain_id}/record" ""
   if _contains "$response" "\"name\":\"$_sub_domain\"" >/dev/null; then
-    _record_id=$(echo "$response" | tr '{' "\n" | grep "\"content\":\"$txtvalue\"" | _egrep_o "\"id\":[^,]+" | _head_n 1 | cut -d : -f 2 | tr -d \")
+    _record_id=$(echo "$response" | tr '{' "\n" | grep "$txtvalue" | _egrep_o "\"id\":[^,]+" | _head_n 1 | cut -d : -f 2 | tr -d \")
   fi
 
   if [ -z "$_record_id" ]; then
@@ -75,7 +75,7 @@ dns_exoscale_rm() {
 
   _debug "Deleting record $_record_id"
 
-  if ! _exoscale_rest DELETE "domains/$_domain_id/records/$_record_id" "" "$_domain_token"; then
+  if ! _exoscale_rest DELETE "dns-domain/$_domain_id/record/$_record_id" ""; then
     _err "Delete record error."
     return 1
   fi
@@ -108,10 +108,9 @@ _checkAuth() {
 # _sub_domain=_acme-challenge.www
 # _domain=domain.com
 # _domain_id=sdjkglgdfewsdfg
-# _domain_token=sdjkglgdfewsdfg
 _get_root() {
 
-  if ! _exoscale_rest GET "domains"; then
+  if ! _exoscale_rest GET "dns-domain"; then
     return 1
   fi
 
@@ -126,10 +125,9 @@ _get_root() {
       return 1
     fi
 
-    if _contains "$response" "\"name\":\"$h\"" >/dev/null; then
-      _domain_id=$(echo "$response" | tr '{' "\n" | grep "\"name\":\"$h\"" | _egrep_o "\"id\":[^,]+" | _head_n 1 | cut -d : -f 2 | tr -d \")
-      _domain_token=$(echo "$response" | tr '{' "\n" | grep "\"name\":\"$h\"" | _egrep_o "\"token\":\"[^\"]*\"" | _head_n 1 | cut -d : -f 2 | tr -d \")
-      if [ "$_domain_token" ] && [ "$_domain_id" ]; then
+    if _contains "$response" "\"unicode-name\":\"$h\"" >/dev/null; then
+      _domain_id=$(echo "$response" | jq -r --arg h "$h" '.["dns-domains"][] | select(.["unicode-name"] == $h) | .id')
+      if [ "$_domain_id" ]; then
         _sub_domain=$(printf "%s" "$domain" | cut -d . -f 1-"$p")
         _domain=$h
         return 0
@@ -164,7 +162,6 @@ _exoscale_rest() {
   method=$1
   path="$2"
   data="$3"
-  token="$4"
   request_url="$EXOSCALE_API/$path"
   _debug "$path"
 
