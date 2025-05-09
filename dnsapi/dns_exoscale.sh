@@ -144,7 +144,7 @@ _generate_signature() {
   path=$2
   body=$3
   timestamp=$(($(date +%s) + 600))
-  
+
   message=$(printf "%s /v2/%s\n%s\n\n\n%s" "$method" "$path" "$body" "$timestamp")
 
   # Compute HMAC SHA-256 signature
@@ -152,13 +152,12 @@ _generate_signature() {
 
   # Construct Authorization header
   auth_header="EXO2-HMAC-SHA256 credential=$EXOSCALE_API_KEY,expires=$timestamp,signature=$signature"
-  echo $auth_header
+  echo "$auth_header"
 }
-
 
 # returns response
 _exoscale_rest() {
-  method=$1
+  method="$1"
   path="$2"
   data="$3"
   request_url="$EXOSCALE_API/$path"
@@ -166,7 +165,7 @@ _exoscale_rest() {
 
   export _H1="Accept: application/json"
 
-  signature=$(_generate_signature $method $path $data)
+  signature=$(_generate_signature "$method" "$path" "$data")
   export _H2="Authorization: $signature"
 
   if [ "$data" ] || [ "$method" = "DELETE" ]; then
