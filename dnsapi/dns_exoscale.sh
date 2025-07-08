@@ -125,7 +125,7 @@ _get_root() {
     fi
 
     if _contains "$response" "\"unicode-name\":\"$h\"" >/dev/null; then
-      _domain_id=$(echo "$response" | jq -r --arg h "$h" '.["dns-domains"][] | select(.["unicode-name"] == $h) | .id')
+      _domain_id=$(_extract_domain_id "$response" "$h")
       if [ "$_domain_id" ]; then
         _sub_domain=$(printf "%s" "$domain" | cut -d . -f 1-"$p")
         _domain=$h
@@ -137,6 +137,14 @@ _get_root() {
     i=$(_math "$i" + 1)
   done
   return 1
+}
+
+_extract_domain_id() {
+  json="$1"
+  domain_name="$2"
+
+  echo "$json" | grep "\"unicode-name\":\"$domain_name\"" | \
+    sed -n 's/.*"id":"\([^"]*\)".*/\1/p'
 }
 
 _generate_signature() {
