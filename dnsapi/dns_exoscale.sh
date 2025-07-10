@@ -60,10 +60,12 @@ dns_exoscale_rm() {
 
   _debug _sub_domain "$_sub_domain"
   _debug _domain "$_domain"
+  _sub_domain_lower_case=$(echo "$_sub_domain" | _lower_case)
+  _debug _sub_domain_lower_case "$_sub_domain_lower_case"
 
   _debug "Getting txt records"
   _exoscale_rest GET "dns-domain/${_domain_id}/record" ""
-  if _contains "$response" "\"name\":\"$_sub_domain\"" >/dev/null; then
+  if _contains "$response" "\"name\":\"$_sub_domain_lower_case\"" >/dev/null; then
     _record_id=$(echo "$response" | tr '{' "\n" | grep "$txtvalue" | _egrep_o "id\":\"[^\"]*\"" | _head_n 1 | cut -d : -f 2 | tr -d \")
   fi
 
