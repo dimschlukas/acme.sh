@@ -67,6 +67,13 @@ dns_exoscale_rm() {
     _record_id=$(echo "$response" | tr '{' "\n" | grep "$txtvalue" | _egrep_o "id\":\"[^\"]*\"" | _head_n 1 | cut -d : -f 2 | tr -d \")
   fi
 
+  _debug "Record id: $_record_id"
+  _debug "Domain id: $_domain_id"
+  _debug "Sub domain: $_sub_domain"
+  _debug "Domain: $_domain"
+  _debug "Txt value: $txtvalue"
+  _debug "Response: $response"
+
   if [ -z "$_record_id" ]; then
     _err "Can not get record id to remove."
     return 1
