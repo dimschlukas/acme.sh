@@ -64,7 +64,7 @@ dns_exoscale_rm() {
   _debug "Getting txt records"
   _exoscale_rest GET "dns-domain/${_domain_id}/record" ""
   if _contains "$response" "\"name\":\"$_sub_domain\"" >/dev/null; then
-    _record_id=$(echo "$response" | tr '{' "\n" | grep "$txtvalue" | _egrep_o "\"id\":[^,]+" | _head_n 1 | cut -d : -f 2 | tr -d \")
+    _record_id=$(echo "$response" | tr '{' "\n" | grep "$txtvalue" | _egrep_o "id\":\"[^\"]*\"" | _head_n 1 | cut -d : -f 2 | tr -d \")
   fi
 
   if [ -z "$_record_id" ]; then
